@@ -2,6 +2,9 @@ spring:
   application:
     name: bancoias-credit-applications
 
+  main:
+    web-application-type: reactive
+
   r2dbc:
     url: r2dbc:postgresql://localhost:5432/bancoias_credit
     username: bancoias

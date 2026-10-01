@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS customer (
     current_approved_amount NUMERIC(15,2) NOT NULL DEFAULT 0
 );
 
-/
 
 CREATE TABLE IF NOT EXISTS credit_application (
     id BIGSERIAL PRIMARY KEY,
