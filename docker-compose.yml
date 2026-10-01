@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: bancoias-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bancoias_credit
+      POSTGRES_USER: bancoias
+      POSTGRES_PASSWORD: bancoias123
+    ports:
+      - "5432:5432"
+    volumes:
+      - bancoias_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  bancoias_postgres_data:
