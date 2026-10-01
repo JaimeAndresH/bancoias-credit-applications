@@ -18,3 +18,15 @@ CREATE TABLE IF NOT EXISTS credit_application (
     processed_at TIMESTAMP NOT NULL,
     request_hash VARCHAR(64)
 );
+
+CREATE TABLE IF NOT EXISTS credit_approval_outbox (
+    event_id UUID PRIMARY KEY,
+    application_reference VARCHAR(100) NOT NULL UNIQUE,
+    payload TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    published_at TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS credit_approval_outbox_pending_idx
+    ON credit_approval_outbox (created_at, event_id)
+    WHERE published_at IS NULL;

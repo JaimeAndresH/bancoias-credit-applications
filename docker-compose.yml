@@ -1,4 +1,17 @@
 services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: bancoias-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: bancoias
+      RABBITMQ_DEFAULT_PASS: bancoias123
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - bancoias_rabbitmq_data:/var/lib/rabbitmq
+
   postgres:
     image: postgres:16
     container_name: bancoias-postgres
@@ -13,4 +26,5 @@ services:
       - bancoias_postgres_data:/var/lib/postgresql/data
 
 volumes:
+  bancoias_rabbitmq_data:
   bancoias_postgres_data:

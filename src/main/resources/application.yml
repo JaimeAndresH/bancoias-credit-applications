@@ -5,6 +5,18 @@ spring:
   main:
     web-application-type: reactive
 
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:bancoias}
+    password: ${RABBITMQ_PASSWORD:bancoias123}
+    connection-timeout: 5s
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+
+
   r2dbc:
     url: r2dbc:postgresql://localhost:5432/bancoias_credit
     username: bancoias
@@ -18,3 +30,8 @@ spring:
 logging:
   level:
     org.springframework.r2dbc: INFO
+
+bancoias:
+  messaging:
+    enabled: ${MESSAGING_ENABLED:true}
+    poll-delay-ms: 5000
