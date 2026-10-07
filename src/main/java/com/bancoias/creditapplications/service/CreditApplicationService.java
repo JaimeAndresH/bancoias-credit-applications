@@ -2,7 +2,7 @@ package com.bancoias.creditapplications.service;
 
 import com.bancoias.creditapplications.domain.model.CreditApplication;
 import com.bancoias.creditapplications.domain.model.enums.CreditApplicationStatus;
-import com.bancoias.creditapplications.domain.model.enums.CustomerStatus;
+import com.bancoias.creditapplications.domain.policy.CreditApplicationPolicy;
 import com.bancoias.creditapplications.domain.model.enums.RejectionReason;
 import com.bancoias.creditapplications.dto.request.CreditApplicationRequest;
 import com.bancoias.creditapplications.dto.response.CreditApplicationResponse;
@@ -69,24 +69,14 @@ public class CreditApplicationService {
     private Mono<CreditApplicationResponse> processNewApplication(
             CreditApplicationRequest request) {
         return Mono.defer(() -> {
-            if (request.amount() == null || request.termMonths() == null) {
-                return Mono.<CreditApplicationResponse>error(
-                        new IllegalArgumentException("amount y termMonths son obligatorios"));
-            }
-
-            if (request.amount().signum() <= 0) {
-                return saveResult(request, CreditApplicationStatus.REJECTED,
-                        RejectionReason.INVALID_AMOUNT);
-            }
-
-            if (request.termMonths() < 6 || request.termMonths() > 60) {
-                return saveResult(request, CreditApplicationStatus.REJECTED,
-                        RejectionReason.INVALID_TERM);
+            var rejection = CreditApplicationPolicy.evaluate(request.amount(), request.termMonths());
+            if (rejection.isPresent()) {
+                return saveResult(request, CreditApplicationStatus.REJECTED, rejection.get());
             }
 
             return customerRepository.findByCustomerId(request.customerId())
                     .flatMap(customer -> {
-                        if (customer.getStatus() != CustomerStatus.ELIGIBLE) {
+                        if (!customer.isEligible()) {
                             return saveResult(request, CreditApplicationStatus.REJECTED,
                                     RejectionReason.CUSTOMER_BLOCKED);
                         }
@@ -114,15 +104,12 @@ public class CreditApplicationService {
             CreditApplicationRequest request,
             CreditApplicationStatus status,
             RejectionReason rejectionReason) {
-        CreditApplication application = CreditApplication.builder()
-                .applicationReference(request.applicationReference())
-                .customerId(request.customerId())
-                .amount(request.amount())
-                .termMonths(request.termMonths())
-                .status(status)
-                .rejectionReason(rejectionReason)
-                .processedAt(LocalDateTime.now())
-                .build();
+        LocalDateTime processedAt = LocalDateTime.now();
+        CreditApplication application = status == CreditApplicationStatus.APPROVED
+                ? CreditApplication.approve(request.applicationReference(), request.customerId(),
+                        request.amount(), request.termMonths(), processedAt)
+                : CreditApplication.reject(request.applicationReference(), request.customerId(),
+                        request.amount(), request.termMonths(), rejectionReason, processedAt);
 
         return creditApplicationRepository.save(application)
                 .flatMap(saved -> saved.getStatus() == CreditApplicationStatus.APPROVED
@@ -135,10 +122,8 @@ public class CreditApplicationService {
             CreditApplication existing,
             CreditApplicationRequest request) {
 
-        boolean sameRequest =
-                existing.getCustomerId().equals(request.customerId())
-                        && existing.getAmount().compareTo(request.amount()) == 0
-                        && existing.getTermMonths().equals(request.termMonths());
+        boolean sameRequest = existing.matchesRequest(
+                request.customerId(), request.amount(), request.termMonths());
 
         if (sameRequest) {
             return Mono.just(mapper.toResponse(existing));

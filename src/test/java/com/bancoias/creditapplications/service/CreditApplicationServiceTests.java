@@ -197,9 +197,8 @@ class CreditApplicationServiceTests {
 
     @Test
     void mapsRecentApplicationsInRepositoryOrder() {
-        CreditApplication newest = existing("200");
-        newest.setApplicationReference("REF-2");
-        newest.setProcessedAt(LocalDateTime.of(2026, 10, 1, 13, 0));
+        CreditApplication newest = CreditApplication.approve("REF-2", "CLI-1", new BigDecimal("200"),
+                12, LocalDateTime.of(2026, 10, 1, 13, 0));
         when(applications.findRecent(2)).thenReturn(Flux.just(newest, existing("100")));
 
         StepVerifier.create(service.findRecent(2))
@@ -250,11 +249,8 @@ class CreditApplicationServiceTests {
     }
 
     private CreditApplication existing(String amount) {
-        return CreditApplication.builder()
-                .applicationReference("REF-1").customerId("CLI-1")
-                .amount(new BigDecimal(amount)).termMonths(12)
-                .status(CreditApplicationStatus.APPROVED)
-                .processedAt(LocalDateTime.of(2026, 10, 1, 12, 0)).build();
+        return CreditApplication.approve("REF-1", "CLI-1", new BigDecimal(amount),
+                12, LocalDateTime.of(2026, 10, 1, 12, 0));
     }
 
     private void assertRejected(CreditApplicationResponse response, RejectionReason reason) {
