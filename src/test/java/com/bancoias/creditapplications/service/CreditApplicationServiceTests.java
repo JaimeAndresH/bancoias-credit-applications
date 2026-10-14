@@ -10,9 +10,10 @@ import com.bancoias.creditapplications.dto.response.CreditApplicationResponse;
 import com.bancoias.creditapplications.exception.ApplicationReferenceConflictException;
 import com.bancoias.creditapplications.exception.CreditApplicationNotFoundException;
 import com.bancoias.creditapplications.mapper.CreditApplicationMapper;
-import com.bancoias.creditapplications.messaging.ApprovalEventOutbox;
-import com.bancoias.creditapplications.repository.CreditApplicationRepository;
-import com.bancoias.creditapplications.repository.CustomerRepository;
+import com.bancoias.creditapplications.application.port.out.ApprovalEventPort;
+import com.bancoias.creditapplications.application.service.CreditApplicationService;
+import com.bancoias.creditapplications.application.port.out.CreditApplicationRepository;
+import com.bancoias.creditapplications.application.port.out.CustomerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -40,7 +41,7 @@ class CreditApplicationServiceTests {
     private ReactiveTransactionManager transactionManager;
     private ReactiveTransaction transaction;
     private CreditApplicationService service;
-    private ApprovalEventOutbox outbox;
+    private ApprovalEventPort outbox;
 
     @BeforeEach
     void setUp() {
@@ -49,7 +50,7 @@ class CreditApplicationServiceTests {
         transactionManager = mock(ReactiveTransactionManager.class);
         transaction = mock(ReactiveTransaction.class);
         CreditApplicationMapper mapper = mock(CreditApplicationMapper.class);
-        outbox = mock(ApprovalEventOutbox.class);
+        outbox = mock(ApprovalEventPort.class);
         when(outbox.recordApproved(any())).thenReturn(Mono.empty());
 
         when(transactionManager.getReactiveTransaction(any())).thenReturn(Mono.just(transaction));

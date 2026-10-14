@@ -20,6 +20,7 @@ public final class Customer {
     private final BigDecimal maxApprovedAmount;
 
     private final BigDecimal currentApprovedAmount;
+
     public boolean isEligible() {
         return status == CustomerStatus.ELIGIBLE;
     }

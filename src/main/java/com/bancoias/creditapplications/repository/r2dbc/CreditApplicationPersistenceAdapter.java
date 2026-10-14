@@ -1,7 +1,7 @@
 package com.bancoias.creditapplications.repository.r2dbc;
 
 import com.bancoias.creditapplications.domain.model.CreditApplication;
-import com.bancoias.creditapplications.repository.CreditApplicationRepository;
+import com.bancoias.creditapplications.application.port.out.CreditApplicationRepository;
 import com.bancoias.creditapplications.repository.entity.CreditApplicationEntity;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;

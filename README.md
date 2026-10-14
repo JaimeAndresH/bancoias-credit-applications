@@ -288,6 +288,79 @@ Si falla la conexión, comprueba `docker compose ps` y consulta los logs con
 `docker compose logs postgres rabbitmq`. Si 8080 está ocupado, establece
 `$env:SERVER_PORT = '8081'` antes de iniciar la aplicación y ajusta `$apiBase`.
 
+## Imagen Docker
+
+### Archivo .env local
+
+Spring importa el `.env` de la raíz al iniciar desde esa carpeta (IDE o Maven).
+Usa líneas `CLAVE=valor`, sin `export` ni comillas envolventes, ya que Spring lo
+interpreta como propiedades. Configura `DB_HOST` con una URL R2DBC completa y
+define `DB_USERNAME`, `DB_PASSWORD`, `RABBITMQ_HOST`, `RABBITMQ_PORT`,
+`RABBITMQ_USER` y `RABBITMQ_PASSWORD`.
+
+Docker Compose pasa ese archivo al backend con `env_file`. Para usar los servicios
+incluidos, sobrescribe solamente la URL de base de datos, el host de RabbitMQ y
+su puerto con las direcciones internas de Docker. Las credenciales también se
+utilizan al inicializar PostgreSQL y RabbitMQ. Cambiarlas en `.env` no actualiza
+usuarios ya existentes en los volúmenes de esos servicios.
+
+```powershell
+docker compose up -d --build
+```
+
+El `.env` no se incorpora a la imagen. Para desplegar contra servicios externos,
+usa `docker run --env-file` con la configuración del entorno como se indica abajo.
+
+### Construcción y ejecución
+
+Construye la imagen desde la raíz del proyecto con Docker en modo contenedores Linux:
+
+```powershell
+docker build -t bancoias-credit-applications:1.0.0 .
+```
+
+El Dockerfile compila con Maven y Java 21 y copia únicamente el JAR ejecutable
+a una imagen Java 21 JRE. La aplicación se ejecuta como usuario sin privilegios.
+El build omite la ejecución de pruebas; ejecuta la suite antes de publicar la imagen.
+
+Para iniciarla, crea un archivo local `deploy.env` fuera del repositorio con los
+valores de tu entorno (sustituye los ejemplos):
+
+```dotenv
+SPRING_R2DBC_URL=r2dbc:postgresql://postgres-host:5432/bancoias_credit
+SPRING_R2DBC_USERNAME=application_user
+SPRING_R2DBC_PASSWORD=replace-me
+RABBITMQ_HOST=rabbitmq-host
+RABBITMQ_PORT=5672
+RABBITMQ_USER=application_user
+RABBITMQ_PASSWORD=replace-me
+```
+
+```powershell
+docker run --rm --name bancoias-credit-applications -p 8080:8080 --env-file /ruta/deploy.env bancoias-credit-applications:1.0.0
+```
+
+Los hosts deben ser accesibles desde el contenedor: `localhost` apunta al propio
+contenedor. En Docker Desktop puedes usar `host.docker.internal` para acceder a
+los puertos publicados en tu equipo. En una red Docker compartida puedes usar
+los nombres de los servicios.
+
+La imagen establece `SPRING_SQL_INIT_MODE=never`: prepara previamente las tablas
+de `src/main/resources/schema.sql` en el entorno de despliegue. Para una prueba
+local puedes sobrescribirlo con `SPRING_SQL_INIT_MODE=always`; esto también carga
+los datos de demostración de `data.sql`. Las credenciales se suministran al
+ejecutar el contenedor, no durante el build. Puedes configurar opciones JVM con
+`JAVA_TOOL_OPTIONS`.
+
+Para publicar posteriormente en tu registro:
+
+```powershell
+docker tag bancoias-credit-applications:1.0.0 REGISTRY/PROJECT/bancoias-credit-applications:1.0.0
+docker push REGISTRY/PROJECT/bancoias-credit-applications:1.0.0
+```
+
+Sustituye `REGISTRY/PROJECT` y autentícate previamente en ese registro.
+
 ## Documentación de entrega
 
 - [Decisiones técnicas](DECISIONS.md).

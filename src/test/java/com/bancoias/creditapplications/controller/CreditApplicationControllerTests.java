@@ -7,7 +7,8 @@ import com.bancoias.creditapplications.dto.response.CreditApplicationResponse;
 import com.bancoias.creditapplications.exception.ApplicationReferenceConflictException;
 import com.bancoias.creditapplications.exception.CreditApplicationNotFoundException;
 import com.bancoias.creditapplications.exception.GlobalExceptionHandler;
-import com.bancoias.creditapplications.service.CreditApplicationService;
+import com.bancoias.creditapplications.application.port.in.ProcessCreditApplicationUseCase;
+import com.bancoias.creditapplications.application.port.in.QueryCreditApplicationsUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -26,13 +27,15 @@ import static org.mockito.Mockito.*;
 
 class CreditApplicationControllerTests {
 
-    private CreditApplicationService service;
+    private ProcessCreditApplicationUseCase processUseCase;
+    private QueryCreditApplicationsUseCase queryUseCase;
     private WebTestClient client;
 
     @BeforeEach
     void setUp() {
-        service = mock(CreditApplicationService.class);
-        client = WebTestClient.bindToController(new CreditApplicationController(service))
+        processUseCase = mock(ProcessCreditApplicationUseCase.class);
+        queryUseCase = mock(QueryCreditApplicationsUseCase.class);
+        client = WebTestClient.bindToController(new CreditApplicationController(processUseCase, queryUseCase))
                 .controllerAdvice(new GlobalExceptionHandler()).build();
     }
 
@@ -40,7 +43,7 @@ class CreditApplicationControllerTests {
     void returnsApprovedDecision() {
         CreditApplicationRequest request = new CreditApplicationRequest(
                 "REF-001", "CLI-1001", new BigDecimal("6000000"), 24);
-        when(service.process(request)).thenReturn(Mono.just(new CreditApplicationResponse(
+        when(processUseCase.process(request)).thenReturn(Mono.just(new CreditApplicationResponse(
                 request.applicationReference(), request.customerId(), request.amount(),
                 request.termMonths(), CreditApplicationStatus.APPROVED, null,
                 LocalDateTime.of(2026, 10, 1, 12, 0))));
@@ -58,14 +61,14 @@ class CreditApplicationControllerTests {
                 .jsonPath("$.status").isEqualTo("APPROVED")
                 .jsonPath("$.processedAt").isEqualTo("2026-10-01T12:00:00");
 
-        verify(service).process(request);
+        verify(processUseCase).process(request);
     }
 
     @Test
     void passesInvalidBusinessValuesToServiceAndReturnsRejection() {
         CreditApplicationRequest request = new CreditApplicationRequest(
                 "REF-002", "CLI-1001", BigDecimal.ZERO, 5);
-        when(service.process(request)).thenReturn(Mono.just(new CreditApplicationResponse(
+        when(processUseCase.process(request)).thenReturn(Mono.just(new CreditApplicationResponse(
                 request.applicationReference(), request.customerId(), request.amount(),
                 request.termMonths(), CreditApplicationStatus.REJECTED,
                 RejectionReason.INVALID_AMOUNT, LocalDateTime.of(2026, 10, 1, 12, 0))));
@@ -77,7 +80,7 @@ class CreditApplicationControllerTests {
                 .jsonPath("$.status").isEqualTo("REJECTED")
                 .jsonPath("$.rejectionReason").isEqualTo("INVALID_AMOUNT");
 
-        verify(service).process(request);
+        verify(processUseCase).process(request);
     }
 
     @ParameterizedTest
@@ -101,24 +104,24 @@ class CreditApplicationControllerTests {
                 .jsonPath("$.timestamp").value(value ->
                         assertDoesNotThrow(() -> Instant.parse((String) value)));
 
-        verifyNoInteractions(service);
+        verifyNoInteractions(processUseCase, queryUseCase);
     }
 
     @Test
     void findsApplicationByReference() {
-        when(service.findByApplicationReference("REF-001"))
+        when(queryUseCase.findByApplicationReference("REF-001"))
                 .thenReturn(Mono.just(response("REF-001")));
 
         client.get().uri("/api/credit-applications/REF-001")
                 .exchange().expectStatus().isOk()
                 .expectBody().jsonPath("$.applicationReference").isEqualTo("REF-001");
 
-        verify(service).findByApplicationReference("REF-001");
+        verify(queryUseCase).findByApplicationReference("REF-001");
     }
 
     @Test
     void returnsNotFoundForMissingReference() {
-        when(service.findByApplicationReference("MISSING"))
+        when(queryUseCase.findByApplicationReference("MISSING"))
                 .thenReturn(Mono.error(new CreditApplicationNotFoundException("No existe")));
 
         client.get().uri("/api/credit-applications/MISSING")
@@ -131,7 +134,7 @@ class CreditApplicationControllerTests {
 
     @Test
     void listsRecentApplicationsWithDefaultLimit() {
-        when(service.findRecent(20)).thenReturn(Flux.just(response("REF-002"), response("REF-001")));
+        when(queryUseCase.findRecent(20)).thenReturn(Flux.just(response("REF-002"), response("REF-001")));
 
         client.get().uri("/api/credit-applications")
                 .exchange().expectStatus().isOk()
@@ -140,24 +143,24 @@ class CreditApplicationControllerTests {
                 .jsonPath("$[0].applicationReference").isEqualTo("REF-002")
                 .jsonPath("$[1].applicationReference").isEqualTo("REF-001");
 
-        verify(service).findRecent(20);
+        verify(queryUseCase).findRecent(20);
     }
 
     @ParameterizedTest
     @ValueSource(ints = {1, 100})
     void acceptsCustomLimit(int limit) {
-        when(service.findRecent(limit)).thenReturn(Flux.just(response("REF-001")));
+        when(queryUseCase.findRecent(limit)).thenReturn(Flux.just(response("REF-001")));
 
         client.get().uri("/api/credit-applications?limit=" + limit)
                 .exchange().expectStatus().isOk()
                 .expectBody().jsonPath("$[0].applicationReference").isEqualTo("REF-001");
 
-        verify(service).findRecent(limit);
+        verify(queryUseCase).findRecent(limit);
     }
 
     @Test
     void returnsEmptyArrayWhenThereAreNoRecentApplications() {
-        when(service.findRecent(20)).thenReturn(Flux.empty());
+        when(queryUseCase.findRecent(20)).thenReturn(Flux.empty());
 
         client.get().uri("/api/credit-applications")
                 .exchange().expectStatus().isOk()
@@ -171,14 +174,14 @@ class CreditApplicationControllerTests {
                 .exchange().expectStatus().isBadRequest()
                 .expectBody().jsonPath("$.code").isEqualTo("INVALID_REQUEST");
 
-        verifyNoInteractions(service);
+        verifyNoInteractions(processUseCase, queryUseCase);
     }
 
     @Test
     void returnsConflictForReferenceWithDifferentPayload() {
         CreditApplicationRequest request = new CreditApplicationRequest(
                 "REF-001", "CLI-1001", new BigDecimal("100"), 12);
-        when(service.process(request)).thenReturn(Mono.error(
+        when(processUseCase.process(request)).thenReturn(Mono.error(
                 new ApplicationReferenceConflictException("Referencia procesada con datos diferentes")));
 
         client.post().uri("/api/credit-applications")
@@ -192,7 +195,7 @@ class CreditApplicationControllerTests {
 
     @Test
     void hidesTechnicalDetailsOfUnexpectedErrors() {
-        when(service.findByApplicationReference("REF-001"))
+        when(queryUseCase.findByApplicationReference("REF-001"))
                 .thenReturn(Mono.error(new IllegalStateException("Sensitive database details")));
 
         client.get().uri("/api/credit-applications/REF-001")
@@ -211,7 +214,7 @@ class CreditApplicationControllerTests {
                 .exchange().expectStatus().isEqualTo(415)
                 .expectBody().jsonPath("$.code").isEqualTo("UNSUPPORTED_MEDIA_TYPE");
 
-        verifyNoInteractions(service);
+        verifyNoInteractions(processUseCase, queryUseCase);
     }
 
     private CreditApplicationResponse response(String reference) {
@@ -226,6 +229,6 @@ class CreditApplicationControllerTests {
                 .exchange().expectStatus().isBadRequest()
                 .expectBody().jsonPath("$.code").isEqualTo("INVALID_REQUEST");
 
-        verifyNoInteractions(service);
+        verifyNoInteractions(processUseCase, queryUseCase);
     }
 }

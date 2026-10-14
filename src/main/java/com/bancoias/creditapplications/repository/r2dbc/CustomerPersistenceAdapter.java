@@ -1,7 +1,7 @@
 package com.bancoias.creditapplications.repository.r2dbc;
 
 import com.bancoias.creditapplications.domain.model.Customer;
-import com.bancoias.creditapplications.repository.CustomerRepository;
+import com.bancoias.creditapplications.application.port.out.CustomerRepository;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Mono;
 import java.math.BigDecimal;

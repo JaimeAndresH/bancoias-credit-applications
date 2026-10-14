@@ -1,6 +1,7 @@
 package com.bancoias.creditapplications.messaging;
 
 import com.bancoias.creditapplications.domain.model.CreditApplication;
+import com.bancoias.creditapplications.application.port.out.ApprovalEventPort;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
@@ -10,7 +11,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.UUID;
 
 @Repository
-public class ApprovalEventOutbox {
+public class ApprovalEventOutbox implements ApprovalEventPort {
 
     private final DatabaseClient database;
     private final ObjectMapper mapper;
@@ -20,6 +21,7 @@ public class ApprovalEventOutbox {
         this.mapper = mapper;
     }
 
+    @Override
     public Mono<Void> recordApproved(CreditApplication application) {
         return Mono.defer(() -> {
             CreditApprovedEvent event = new CreditApprovedEvent(UUID.randomUUID(),

@@ -1,4 +1,4 @@
-package com.bancoias.creditapplications.service;
+package com.bancoias.creditapplications.application.service;
 
 import com.bancoias.creditapplications.domain.model.CreditApplication;
 import com.bancoias.creditapplications.domain.model.enums.CreditApplicationStatus;
@@ -9,9 +9,11 @@ import com.bancoias.creditapplications.dto.response.CreditApplicationResponse;
 import com.bancoias.creditapplications.exception.ApplicationReferenceConflictException;
 import com.bancoias.creditapplications.exception.CreditApplicationNotFoundException;
 import com.bancoias.creditapplications.mapper.CreditApplicationMapper;
-import com.bancoias.creditapplications.messaging.ApprovalEventOutbox;
-import com.bancoias.creditapplications.repository.CreditApplicationRepository;
-import com.bancoias.creditapplications.repository.CustomerRepository;
+import com.bancoias.creditapplications.application.port.out.ApprovalEventPort;
+import com.bancoias.creditapplications.application.port.in.ProcessCreditApplicationUseCase;
+import com.bancoias.creditapplications.application.port.in.QueryCreditApplicationsUseCase;
+import com.bancoias.creditapplications.application.port.out.CreditApplicationRepository;
+import com.bancoias.creditapplications.application.port.out.CustomerRepository;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.ReactiveTransactionManager;
@@ -22,20 +24,20 @@ import reactor.core.publisher.Mono;
 import java.time.LocalDateTime;
 
 @Service
-public class CreditApplicationService {
+public class CreditApplicationService implements ProcessCreditApplicationUseCase, QueryCreditApplicationsUseCase {
 
     private final CreditApplicationMapper mapper;
     private final CreditApplicationRepository creditApplicationRepository;
     private final CustomerRepository customerRepository;
     private final TransactionalOperator transactionalOperator;
-    private final ApprovalEventOutbox outbox;
+    private final ApprovalEventPort outbox;
 
     public CreditApplicationService(
             CreditApplicationMapper mapper,
             CreditApplicationRepository creditApplicationRepository,
             CustomerRepository customerRepository,
             ReactiveTransactionManager transactionManager,
-            ApprovalEventOutbox outbox) {
+            ApprovalEventPort outbox) {
         this.mapper = mapper;
         this.creditApplicationRepository = creditApplicationRepository;
         this.customerRepository = customerRepository;
@@ -43,6 +45,7 @@ public class CreditApplicationService {
         this.outbox = outbox;
     }
 
+    @Override
     public Mono<CreditApplicationResponse> process(CreditApplicationRequest request) {
 
         return creditApplicationRepository
@@ -51,6 +54,7 @@ public class CreditApplicationService {
                 .switchIfEmpty(Mono.defer(() -> processNewApplication(request)));
     }
 
+    @Override
     public Mono<CreditApplicationResponse> findByApplicationReference(String applicationReference) {
         return creditApplicationRepository.findByApplicationReference(applicationReference)
                 .map(mapper::toResponse)
@@ -58,6 +62,7 @@ public class CreditApplicationService {
                         "No existe una solicitud con referencia " + applicationReference)));
     }
 
+    @Override
     public Flux<CreditApplicationResponse> findRecent(int limit) {
         if (limit < 1 || limit > 100) {
             return Flux.error(new IllegalArgumentException("limit debe estar entre 1 y 100"));

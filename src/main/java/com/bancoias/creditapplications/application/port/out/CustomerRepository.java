@@ -1,4 +1,4 @@
-package com.bancoias.creditapplications.repository;
+package com.bancoias.creditapplications.application.port.out;
 
 import com.bancoias.creditapplications.domain.model.Customer;
 import reactor.core.publisher.Mono;

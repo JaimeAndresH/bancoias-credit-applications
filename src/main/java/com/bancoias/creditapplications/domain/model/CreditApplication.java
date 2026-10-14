@@ -2,16 +2,14 @@ package com.bancoias.creditapplications.domain.model;
 
 import com.bancoias.creditapplications.domain.model.enums.CreditApplicationStatus;
 import com.bancoias.creditapplications.domain.model.enums.RejectionReason;
-
-import lombok.Getter;
-import java.util.Objects;
 import com.bancoias.creditapplications.domain.policy.CreditApplicationPolicy;
+import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Getter
-
 public final class CreditApplication {
     private final Long id;
 
