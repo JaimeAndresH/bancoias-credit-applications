@@ -4,8 +4,8 @@ services:
     container_name: bancoias-rabbitmq
     restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: bancoias
-      RABBITMQ_DEFAULT_PASS: bancoias123
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -18,12 +18,29 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: bancoias_credit
-      POSTGRES_USER: bancoias
-      POSTGRES_PASSWORD: bancoias123
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - bancoias_postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: .
+    container_name: bancoias-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    environment:
+      # Local .env uses localhost; containers connect through the Compose network.
+      DB_HOST: r2dbc:postgresql://postgres:5432/bancoias_credit
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+    depends_on:
+      - postgres
+      - rabbitmq
 
 volumes:
   bancoias_rabbitmq_data:

@@ -3,7 +3,7 @@ package com.bancoias.creditapplications.messaging;
 import com.bancoias.creditapplications.config.RabbitMessagingConfiguration;
 import com.bancoias.creditapplications.domain.model.enums.CreditApplicationStatus;
 import com.bancoias.creditapplications.dto.request.CreditApplicationRequest;
-import com.bancoias.creditapplications.service.CreditApplicationService;
+import com.bancoias.creditapplications.application.service.CreditApplicationService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

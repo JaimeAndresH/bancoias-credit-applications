@@ -1,6 +1,6 @@
-package com.bancoias.creditapplications.repository;
+package com.bancoias.creditapplications.repository.r2dbc;
 
-import com.bancoias.creditapplications.domain.model.Customer;
+import com.bancoias.creditapplications.repository.entity.CustomerEntity;
 import org.springframework.data.r2dbc.repository.Modifying;
 import org.springframework.data.r2dbc.repository.Query;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
@@ -8,10 +8,10 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 
-public interface CustomerRepository
-        extends ReactiveCrudRepository<Customer, Long> {
+public interface CustomerR2dbcRepository
+        extends ReactiveCrudRepository<CustomerEntity, Long> {
 
-    Mono<Customer> findByCustomerId(String customerId);
+    Mono<CustomerEntity> findByCustomerId(String customerId);
 
     @Modifying
     @Query("""

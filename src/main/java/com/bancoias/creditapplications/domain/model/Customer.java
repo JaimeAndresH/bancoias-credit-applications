@@ -3,28 +3,25 @@ package com.bancoias.creditapplications.domain.model;
 import com.bancoias.creditapplications.domain.model.enums.CustomerStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Table;
+import lombok.Getter;
 
 import java.math.BigDecimal;
 
-@Table("customer")
-@Data
+@Getter
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
-public class Customer {
-    @Id
-    private Long id;
+public final class Customer {
+    private final Long id;
 
-    private String customerId;
+    private final String customerId;
 
-    private CustomerStatus status;
+    private final CustomerStatus status;
 
-    private BigDecimal maxApprovedAmount;
+    private final BigDecimal maxApprovedAmount;
 
-    private BigDecimal currentApprovedAmount;
+    private final BigDecimal currentApprovedAmount;
+
+    public boolean isEligible() {
+        return status == CustomerStatus.ELIGIBLE;
+    }
 }
-

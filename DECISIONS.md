@@ -14,15 +14,23 @@ El objetivo es construir una solución backend mínima y funcional para registra
 
 ## 1. Arquitectura del proyecto
 
-Se adopta una arquitectura por capas simple:
+Se separa el dominio de la persistencia y se exponen los casos de uso mediante puertos de entrada y salida:
 
 ```text
 controller/
-service/
+application/
+  port/
+    in/
+    out/
+  service/
+messaging/
 repository/
+  entity/
+  r2dbc/
 domain/
   model/
-  enums/
+    enums/
+  policy/
 dto/
   request/
   response/
@@ -33,7 +41,13 @@ config/
 
 ### Decisión
 
-No se implementa una arquitectura hexagonal completa para evitar sobrearquitectura en una prueba de alcance reducido.
+El dominio no depende de Spring Data ni de Reactor. `CreditApplication` es inmutable y se crea mediante `approve` o `reject`, protegiendo la coherencia del resultado. `restore` recupera resultados persistidos sin reevaluar políticas de aprobación que podrían cambiar con el tiempo. `CreditApplicationPolicy` evalúa monto y plazo; `Customer.isEligible()` encapsula la elegibilidad.
+
+Las interfaces `CreditApplicationRepository` y `CustomerRepository` están en `application/port/out/`. Los adaptadores y repositorios Spring Data están en `repository/r2dbc/`; las anotaciones de tabla e identificador quedan en `repository/entity/`.
+
+El controlador depende de `ProcessCreditApplicationUseCase` y `QueryCreditApplicationsUseCase`, definidos en `application/port/in/`. `application/service/CreditApplicationService` implementa ambos y depende de `ApprovalEventPort` para registrar aprobaciones. `ApprovalEventOutbox` implementa este puerto manteniendo el registro dentro de la transacción; el dispatcher conserva la publicación asíncrona.
+
+El servicio sigue coordinando idempotencia, reserva atómica de cupo, transacción y outbox. Los valores de negocio inválidos siguen produciendo rechazos persistidos. Se conservan Reactor, la gestión transaccional de Spring y los DTO actuales en la capa de aplicación; el dominio permanece independiente de esos frameworks.
 
 ### Justificación
 

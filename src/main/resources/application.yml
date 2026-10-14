@@ -1,4 +1,7 @@
 spring:
+  config:
+    import: "optional:file:./.env[.properties]"
+
   application:
     name: bancoias-credit-applications
 
@@ -6,10 +9,10 @@ spring:
     web-application-type: reactive
 
   rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER:bancoias}
-    password: ${RABBITMQ_PASSWORD:bancoias123}
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USER}
+    password: ${RABBITMQ_PASSWORD}
     connection-timeout: 5s
     publisher-confirm-type: correlated
     publisher-returns: true
@@ -18,9 +21,9 @@ spring:
 
 
   r2dbc:
-    url: r2dbc:postgresql://localhost:5432/bancoias_credit
-    username: bancoias
-    password: bancoias123
+    url: ${DB_HOST}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   sql:
     init:
       mode: always

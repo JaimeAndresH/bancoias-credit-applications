@@ -10,9 +10,10 @@ import com.bancoias.creditapplications.dto.response.CreditApplicationResponse;
 import com.bancoias.creditapplications.exception.ApplicationReferenceConflictException;
 import com.bancoias.creditapplications.exception.CreditApplicationNotFoundException;
 import com.bancoias.creditapplications.mapper.CreditApplicationMapper;
-import com.bancoias.creditapplications.messaging.ApprovalEventOutbox;
-import com.bancoias.creditapplications.repository.CreditApplicationRepository;
-import com.bancoias.creditapplications.repository.CustomerRepository;
+import com.bancoias.creditapplications.application.port.out.ApprovalEventPort;
+import com.bancoias.creditapplications.application.service.CreditApplicationService;
+import com.bancoias.creditapplications.application.port.out.CreditApplicationRepository;
+import com.bancoias.creditapplications.application.port.out.CustomerRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -40,7 +41,7 @@ class CreditApplicationServiceTests {
     private ReactiveTransactionManager transactionManager;
     private ReactiveTransaction transaction;
     private CreditApplicationService service;
-    private ApprovalEventOutbox outbox;
+    private ApprovalEventPort outbox;
 
     @BeforeEach
     void setUp() {
@@ -49,7 +50,7 @@ class CreditApplicationServiceTests {
         transactionManager = mock(ReactiveTransactionManager.class);
         transaction = mock(ReactiveTransaction.class);
         CreditApplicationMapper mapper = mock(CreditApplicationMapper.class);
-        outbox = mock(ApprovalEventOutbox.class);
+        outbox = mock(ApprovalEventPort.class);
         when(outbox.recordApproved(any())).thenReturn(Mono.empty());
 
         when(transactionManager.getReactiveTransaction(any())).thenReturn(Mono.just(transaction));
@@ -197,9 +198,8 @@ class CreditApplicationServiceTests {
 
     @Test
     void mapsRecentApplicationsInRepositoryOrder() {
-        CreditApplication newest = existing("200");
-        newest.setApplicationReference("REF-2");
-        newest.setProcessedAt(LocalDateTime.of(2026, 10, 1, 13, 0));
+        CreditApplication newest = CreditApplication.approve("REF-2", "CLI-1", new BigDecimal("200"),
+                12, LocalDateTime.of(2026, 10, 1, 13, 0));
         when(applications.findRecent(2)).thenReturn(Flux.just(newest, existing("100")));
 
         StepVerifier.create(service.findRecent(2))
@@ -250,11 +250,8 @@ class CreditApplicationServiceTests {
     }
 
     private CreditApplication existing(String amount) {
-        return CreditApplication.builder()
-                .applicationReference("REF-1").customerId("CLI-1")
-                .amount(new BigDecimal(amount)).termMonths(12)
-                .status(CreditApplicationStatus.APPROVED)
-                .processedAt(LocalDateTime.of(2026, 10, 1, 12, 0)).build();
+        return CreditApplication.approve("REF-1", "CLI-1", new BigDecimal(amount),
+                12, LocalDateTime.of(2026, 10, 1, 12, 0));
     }
 
     private void assertRejected(CreditApplicationResponse response, RejectionReason reason) {
